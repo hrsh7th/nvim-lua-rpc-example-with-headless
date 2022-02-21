@@ -21,8 +21,10 @@ client.connect = function(self)
     return
   end
 
-  -- TODO: the -c will load all of plugins. We don't want to load the any plugins automatically (plugin/*.{vim,lua}).
-  self.channel = vim.fn.jobstart('nvim --headless -c "lua require(\'rpc.server\').new():connect()"', {
+  self.channel = vim.fn.jobstart({ 'nvim', '--headless', '-u', 'NONE', '-c', ('luafile %s'):format(vim.api.nvim_get_runtime_file('lua/rpc/_bootstrap.lua', false)[1]) }, {
+    env = {
+      runtimepath = vim.o.runtimepath,
+    },
     on_stdout = function(_, data, _)
       self.session.reader:write(table.concat(data, ''))
     end,

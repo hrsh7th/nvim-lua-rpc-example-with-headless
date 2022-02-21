@@ -12,11 +12,6 @@ server.new = function()
       end
     end
   })
-  self.session.on_request['request'] = function(params, callback)
-    callback(params)
-  end
-  self.session.on_notification['notify'] = function(params)
-  end
   return self
 end
 

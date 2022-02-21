@@ -1,5 +1,6 @@
 local mpack = require('mpack')
 local logger = require('rpc.logger')
+local promise = require('rpc.promise')
 
 local session = {}
 
@@ -38,39 +39,15 @@ session.request = function(self, method, params)
   self.request_id = self.request_id + 1
   self:_write({ session.REQUEST, self.request_id, method, params })
 
-  local request = setmetatable({
-    status = 'waiting',
-    err = nil,
-    res = nil,
-    callbacks = {},
-  }, {
-    __call = function(this, callback)
-      if callback then
-        if this.status == 'waiting' then
-          table.insert(this.callbacks, callback)
-        else
-          callback(this.err, this.res)
-        end
+  return promise.new(function(resolve, reject)
+    self.pending_requests[self.request_id] = function(err, res)
+      if err then
+        reject(err)
       else
-        vim.wait(7 * 24 * 60 * 60 * 1000, function()
-          return this.status ~= 'waiting'
-        end, 0, false)
-        if this.err then
-          error(this.err)
-        end
-        return this.res
+        resolve(res)
       end
     end
-  })
-  self.pending_requests[self.request_id] = function(err, res)
-    request.err = err
-    request.res = res
-    request.status = 'completed'
-    for _, callback in ipairs(request.callbacks) do
-      callback(request.err, request.res)
-    end
-  end
-  return request
+  end)
 end
 
 session.notify = function(self, method, params)
